@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestionale Officina</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--txt:#1d232b;--muted:#68717d;--line:#dfe3e8;--acc:#1f5fbf;--green:#1a8a4a;--red:#c43c32;--warn:#b7791f}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+header{background:#1d232b;color:#fff;padding:12px 20px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;font-weight:600}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{background:none;border:0;color:#c9d1db;padding:8px 14px;border-radius:6px;font-size:15px;cursor:pointer}
+nav button.on{background:#38424f;color:#fff}
+main{max-width:1250px;margin:0 auto;padding:20px 16px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.kpi .l{color:var(--muted);font-size:13px}.kpi .v{font-size:26px;font-weight:650;margin-top:4px}
+.pos{color:var(--green)}.neg{color:var(--red)}.muted{color:var(--muted)}.warn{color:var(--warn)}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.bar .sp{flex:1}
+button.b{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:8px 14px;font-size:14px;cursor:pointer}
+button.b.g{background:var(--green)}button.b.r{background:var(--red)}
+button.b.s{background:#fff;color:var(--txt);border:1px solid var(--line)}
+button.x{background:none;border:1px solid var(--line);border-radius:5px;padding:3px 8px;cursor:pointer;font-size:13px;margin-left:3px}
+input,select,textarea{font:inherit;padding:7px 9px;border:1px solid #c8ced6;border-radius:6px;background:#fff;width:100%}
+.bar input,.bar select{width:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;font-weight:600}
+td.n,th.n{text-align:right;white-space:nowrap}
+tr.low td{background:#fff7e6}
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:#eef1f5}
+.tag.e{background:#e3f4ea;color:var(--green)}.tag.u{background:#fbe7e5;color:var(--red)}
+.tblwrap{overflow-x:auto}
+dialog{border:0;border-radius:12px;padding:0;width:min(640px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(20,25,30,.45)}
+dialog form{padding:20px}
+dialog h3{margin:0 0 14px}
+.f{display:grid;gap:10px;grid-template-columns:repeat(6,1fr)}
+.f label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--muted)}
+.c1{grid-column:span 1}.c2{grid-column:span 2}.c3{grid-column:span 3}.c6{grid-column:span 6}
+.acts{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.hint{background:#eef4fd;border-radius:8px;padding:10px 12px;font-size:13px}
+.hint b{cursor:pointer;color:var(--acc);text-decoration:underline}
+.chart svg{width:100%;height:240px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1d232b;color:#fff;padding:10px 18px;border-radius:8px;display:none;z-index:99}
+@media (max-width:640px){.f{grid-template-columns:1fr 1fr}.c1,.c3,.c6{grid-column:span 2}}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="titolo">Gestionale Officina</h1>
+  <nav>
+    <button data-tab="riepilogo" class="on">Riepilogo</button>
+    <button data-tab="movimenti">Entrate / Uscite</button>
+    <button data-tab="gomme">Magazzino gomme</button>
+    <button data-tab="impostazioni">Impostazioni</button>
+  </nav>
+</header>
+<main>
+
+<section id="t-riepilogo">
+  <div class="bar"><b>Anno</b><select id="r-anno"></select><span class="sp"></span>
+    <button class="b g" onclick="nuovoMov('entrata')">+ Entrata</button>
+    <button class="b r" onclick="nuovoMov('uscita')">+ Uscita</button></div>
+  <div class="grid" id="r-kpi"></div>
+  <div class="card chart" style="margin-top:16px"><b>Entrate (verde) e uscite (rosso) per mese</b><div id="r-chart"></div></div>
+  <div class="grid">
+    <div class="card"><b>Entrate per categoria</b><div id="r-cat-e"></div></div>
+    <div class="card"><b>Uscite per categoria</b><div id="r-cat-u"></div></div>
+    <div class="card"><b>Magazzino gomme</b><div id="r-mag"></div></div>
+  </div>
+</section>
+
+<section id="t-movimenti" hidden>
+  <div class="bar">
+    <input type="month" id="m-mese">
+    <select id="m-tipo"><option value="">Tutti</option><option value="entrata">Entrate</option><option value="uscita">Uscite</option></select>
+    <input id="m-cerca" placeholder="Cerca descrizione…">
+    <span class="sp"></span>
+    <button class="b s" onclick="esportaCSV()">Esporta anno (CSV)</button>
+    <button class="b g" onclick="nuovoMov('entrata')">+ Entrata</button>
+    <button class="b r" onclick="nuovoMov('uscita')">+ Uscita</button>
+  </div>
+  <div class="grid" id="m-kpi" style="margin-bottom:16px"></div>
+  <div class="card tblwrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrizione</th><th>Metodo</th><th class="n">Importo</th><th></th></tr></thead><tbody id="m-tbody"></tbody></table></div>
+</section>
+
+<section id="t-gomme" hidden>
+  <div class="bar">
+    <input id="g-cerca" placeholder="Cerca marca, modello o misura (es. 205 55 16)…" style="min-width:300px">
+    <select id="g-stag"><option value="">Tutte le stagioni</option><option>Estiva</option><option>Invernale</option><option>4 Stagioni</option></select>
+    <label><input type="checkbox" id="g-disp" style="width:auto"> solo disponibili</label>
+    <span class="sp"></span>
+    <button class="b" onclick="nuovaGomma()">+ Nuova gomma</button>
+  </div>
+  <div class="grid" id="g-kpi" style="margin-bottom:16px"></div>
+  <div class="card tblwrap"><table><thead><tr><th>Misura</th><th>Marca / Modello</th><th>Stagione</th><th>DOT</th><th>Pos.</th><th class="n">Q.tà</th><th class="n">Costo</th><th class="n">Prezzo</th><th class="n">Stima</th><th></th></tr></thead><tbody id="g-tbody"></tbody></table></div>
+  <p class="muted" style="font-size:13px">Righe evidenziate = sotto la scorta minima. "Stima" = costo + ricarico impostato; passa il mouse sopra per vedere anche la media dei prezzi della stessa misura e dei venduti.</p>
+</section>
+
+<section id="t-impostazioni" hidden>
+  <div class="card"><form id="f-imp" class="f" onsubmit="salvaImp(event)">
+    <label class="c3">Nome officina<input name="nome_officina"></label>
+    <label class="c1">Ricarico gomme %<input name="ricarico_percentuale" inputmode="decimal"></label>
+    <label class="c1">Arrotonda a €<input name="arrotonda_a" inputmode="decimal"></label>
+    <label class="c1">Montaggio €/gomma<input name="montaggio_per_gomma" inputmode="decimal"></label>
+    <label class="c6">Categorie entrate (separate da virgola)<input name="categorie_entrata"></label>
+    <label class="c6">Categorie uscite (separate da virgola)<input name="categorie_uscita"></label>
+    <div class="c6 acts"><button class="b">Salva impostazioni</button></div>
+  </form></div>
+  <div class="card"><b>Dati e backup</b>
+    <p class="muted" id="i-path"></p>
+    <p>A ogni avvio viene fatto in automatico un backup giornaliero (si tengono gli ultimi 30). Ogni tanto copia la cartella <i>backup</i> su una chiavetta USB.</p>
+    <button class="b s" onclick="faiBackup()">Fai un backup adesso</button>
+  </div>
+</section>
+</main>
+
+<dialog id="d-mov"><form onsubmit="salvaMov(event)">
+  <h3 id="dm-tit"></h3>
+  <div class="f">
+    <input type="hidden" name="id"><input type="hidden" name="tipo">
+    <label class="c2">Data<input type="date" name="data" required></label>
+    <label class="c2">Importo €<input name="importo" inputmode="decimal" required placeholder="0,00"></label>
+    <label class="c2">Metodo<select name="metodo"><option>Contanti</option><option>POS / Carta</option><option>Bonifico</option><option>Assegno</option><option>Altro</option></select></label>
+    <label class="c6">Categoria<select name="categoria"></select></label>
+    <label class="c6">Descrizione<input name="descrizione" placeholder="es. Tagliando Fiat Panda - sig. Rossi"></label>
+  </div>
+  <div class="acts"><button type="button" class="b s" onclick="this.closest('dialog').close()">Annulla</button><button class="b">Salva</button></div>
+</form></dialog>
+
+<dialog id="d-gom"><form onsubmit="salvaGomma(event)">
+  <h3 id="dg-tit">Gomma</h3>
+  <div class="f">
+    <input type="hidden" name="id">
+    <label class="c2">Larghezza<input name="larghezza" inputmode="numeric" placeholder="205"></label>
+    <label class="c2">Altezza (serie)<input name="altezza" inputmode="numeric" placeholder="55"></label>
+    <label class="c2">Diametro (R)<input name="diametro" inputmode="numeric" placeholder="16"></label>
+    <label class="c3">Marca<input name="marca" list="marche"></label>
+    <label class="c3">Modello<input name="modello"></label>
+    <label class="c2">Stagione<select name="stagione"><option>Estiva</option><option>Invernale</option><option>4 Stagioni</option></select></label>
+    <label class="c2">Indice carico/vel.<input name="indice" placeholder="91V"></label>
+    <label class="c2">DOT (sett./anno)<input name="dot" placeholder="2425"></label>
+    <label class="c2">Condizione<select name="condizione"><option>Nuova</option><option>Usata</option></select></label>
+    <label class="c2">Quantità<input name="quantita" inputmode="numeric"></label>
+    <label class="c2">Scorta minima<input name="scorta_min" inputmode="numeric"></label>
+    <label class="c2">Costo acquisto €/pz<input name="costo" inputmode="decimal" oninput="aggStima()"></label>
+    <label class="c2">Prezzo vendita €/pz<input name="prezzo" inputmode="decimal"></label>
+    <label class="c2">Posizione<input name="posizione" placeholder="Scaffale B3"></label>
+    <div class="c6 hint" id="dg-stima"></div>
+    <label class="c6">Note<input name="note"></label>
+  </div>
+  <div class="acts"><button type="button" class="b s" onclick="this.closest('dialog').close()">Annulla</button><button class="b">Salva</button></div>
+</form></dialog>
+<datalist id="marche"><option>Michelin</option><option>Pirelli</option><option>Bridgestone</option><option>Continental</option><option>Goodyear</option><option>Dunlop</option><option>Hankook</option><option>Kumho</option><option>Nexen</option><option>Falken</option><option>Yokohama</option><option>Firestone</option><option>Kleber</option><option>BFGoodrich</option><option>Vredestein</option><option>Nokian</option></datalist>
+
+<dialog id="d-op"><form onsubmit="salvaOp(event)">
+  <h3 id="do-tit"></h3><p class="muted" id="do-desc" style="margin-top:-8px"></p>
+  <div class="f">
+    <input type="hidden" name="id"><input type="hidden" name="op">
+    <label class="c2">Quantità<input name="quantita" inputmode="numeric" oninput="aggTotale()" required></label>
+    <label class="c2"><span id="do-pu">Prezzo €/pz</span><input name="pu" inputmode="decimal" oninput="aggTotale()"></label>
+    <label class="c2" id="do-l-mont">Montaggio €/pz<input name="mont" inputmode="decimal" oninput="aggTotale()"></label>
+    <label class="c2">Data<input type="date" name="data"></label>
+    <label class="c2">Metodo<select name="metodo"><option>Contanti</option><option>POS / Carta</option><option>Bonifico</option><option>Assegno</option></select></label>
+    <label class="c2" id="do-l-tot">Totale €<input name="totale" inputmode="decimal"></label>
+    <label class="c6"><span id="do-chi">Cliente / targa (facoltativo)</span><input name="chi"></label>
+    <label class="c6" style="flex-direction:row;align-items:center;gap:8px;color:var(--txt)"><input type="checkbox" name="registra" style="width:auto"> <span id="do-reg"></span></label>
+  </div>
+  <div class="acts"><button type="button" class="b s" onclick="this.closest('dialog').close()">Annulla</button><button class="b">Conferma</button></div>
+</form></dialog>
+
+<div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const eur=v=>(v==null?'–':new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(v));
+const num=v=>{const n=parseFloat(String(v??'').replace(',','.'));return isNaN(n)?0:n};
+const virg=v=>(v==null||v==='')?'':String(v).replace('.',',');
+const oggi=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const MESI=['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+let IMP={},GOMME=[],MOV=[],GCUR=null;
+
+async function api(url,opt={}){
+  if(opt.body&&typeof opt.body!=='string'){opt.body=JSON.stringify(opt.body);opt.headers={'Content-Type':'application/json'}}
+  const r=await fetch(url,opt);const j=await r.json().catch(()=>({}));
+  if(!r.ok){toast(j.errore||'Errore');throw new Error(j.errore)}
+  return j;
+}
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2600)}
+function formData(f){const o={};new FormData(f).forEach((v,k)=>o[k]=v);f.querySelectorAll('input[type=checkbox]').forEach(c=>o[c.name]=c.checked);return o}
+function fill(f,o){for(const el of f.elements){if(!el.name)continue;if(el.type==='checkbox')el.checked=!!o[el.name];else el.value=o[el.name]??''}}
+const kpi=(l,v,c='')=>`<div class="card kpi"><div class="l">${l}</div><div class="v ${c}">${v}</div></div>`;
+
+// navigazione
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>vai(b.dataset.tab));
+function vai(t){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  document.querySelectorAll('main>section').forEach(s=>s.hidden=s.id!=='t-'+t);
+  ({riepilogo:caricaRiepilogo,movimenti:caricaMov,gomme:caricaGomme,impostazioni:caricaImp})[t]();
+}
+function refresh(){vai(document.querySelector('nav button.on').dataset.tab)}
+
+// impostazioni
+async function leggiImp(){IMP=await api('/api/impostazioni');$('#titolo').textContent=IMP.nome_officina||'Gestionale Officina';document.title=$('#titolo').textContent}
+async function caricaImp(){await leggiImp();fill($('#f-imp'),IMP);$('#i-path').innerHTML='Database: <code>'+esc(IMP._percorso_db)+'</code><br>Backup: <code>'+esc(IMP._percorso_backup)+'</code>'}
+async function salvaImp(e){e.preventDefault();await api('/api/impostazioni',{method:'PUT',body:formData(e.target)});await leggiImp();toast('Impostazioni salvate')}
+async function faiBackup(){await api('/api/backup',{method:'POST'});toast('Backup creato')}
+
+// riepilogo
+async function caricaRiepilogo(){
+  const sel=$('#r-anno'),anno=sel.value||String(new Date().getFullYear());
+  const r=await api('/api/riepilogo?anno='+anno);
+  const anni=[...new Set([String(new Date().getFullYear()),anno,...r.anni])].sort().reverse();
+  sel.innerHTML=anni.map(a=>`<option ${a==anno?'selected':''}>${a}</option>`).join('');
+  sel.onchange=caricaRiepilogo;
+  const mc=new Date().getMonth(),mm=r.mesi[mc],sm=mm.entrate-mm.uscite;
+  $('#r-kpi').innerHTML=kpi('Entrate '+anno,eur(r.totale_entrate),'pos')+kpi('Uscite '+anno,eur(r.totale_uscite),'neg')+
+    kpi('Saldo '+anno,eur(r.saldo),r.saldo>=0?'pos':'neg')+
+    (anno==new Date().getFullYear()?kpi('Saldo mese corrente ('+MESI[mc]+')',eur(sm),sm>=0?'pos':'neg'):'');
+  $('#r-chart').innerHTML=grafico(r.mesi);
+  const cat=t=>{const l=r.categorie.filter(c=>c.tipo===t);if(!l.length)return'<p class="muted">Nessun dato</p>';const tot=l.reduce((a,c)=>a+c.totale,0);
+    return '<table>'+l.map(c=>`<tr><td>${esc(c.categoria)}</td><td class="n muted">${Math.round(c.totale/tot*100)}%</td><td class="n">${eur(c.totale)}</td></tr>`).join('')+'</table>'};
+  $('#r-cat-e').innerHTML=cat('entrata');$('#r-cat-u').innerHTML=cat('uscita');
+  const m=r.magazzino;
+  $('#r-mag').innerHTML=`<table><tr><td>Pezzi in magazzino</td><td class="n">${m.pezzi}</td></tr><tr><td>Valore a costo</td><td class="n">${eur(m.valore_costo)}</td></tr><tr><td>Valore a prezzo di vendita</td><td class="n">${eur(m.valore_vendita)}</td></tr></table>`+
+    (r.sotto_scorta.length?'<p class="warn" style="margin-bottom:4px"><b>Da riordinare:</b></p>'+r.sotto_scorta.map(s=>`<div class="warn">• ${esc(s.descrizione)} — ${s.quantita} pz (min ${s.scorta_min})</div>`).join(''):'<p class="muted">Nessuna gomma sotto scorta</p>');
+}
+function grafico(mesi){
+  const W=900,H=240,P=60,max=Math.max(1,...mesi.flatMap(m=>[m.entrate,m.uscite])),bw=(W-P-10)/12;let s='';
+  for(let i=0;i<=4;i++){const y=H-25-(H-45)*i/4;s+=`<line x1="${P}" x2="${W}" y1="${y}" y2="${y}" stroke="#e6e9ee"/><text x="${P-6}" y="${y+4}" font-size="11" text-anchor="end" fill="#68717d">${Math.round(max*i/4).toLocaleString('it-IT')}</text>`}
+  mesi.forEach((m,i)=>{const x=P+i*bw+bw*.15,w=bw*.33,h1=(H-45)*m.entrate/max,h2=(H-45)*m.uscite/max;
+    s+=`<rect x="${x}" y="${H-25-h1}" width="${w}" height="${h1}" fill="#1a8a4a" rx="2"><title>Entrate ${MESI[i]}: ${eur(m.entrate)}</title></rect>`+
+       `<rect x="${x+w+2}" y="${H-25-h2}" width="${w}" height="${h2}" fill="#c43c32" rx="2"><title>Uscite ${MESI[i]}: ${eur(m.uscite)}</title></rect>`+
+       `<text x="${P+i*bw+bw/2}" y="${H-8}" font-size="12" text-anchor="middle" fill="#68717d">${MESI[i]}</text>`});
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${s}</svg>`;
+}
+
+// movimenti
+$('#m-mese').value=oggi().slice(0,7);
+['#m-mese','#m-tipo'].forEach(s=>$(s).onchange=caricaMov);
+$('#m-cerca').oninput=()=>{clearTimeout(window._mc);window._mc=setTimeout(caricaMov,250)};
+async function caricaMov(){
+  const p=new URLSearchParams();if($('#m-mese').value)p.set('mese',$('#m-mese').value);if($('#m-tipo').value)p.set('tipo',$('#m-tipo').value);if($('#m-cerca').value)p.set('cerca',$('#m-cerca').value);
+  MOV=await api('/api/movimenti?'+p);
+  const e=MOV.filter(m=>m.tipo==='entrata').reduce((a,m)=>a+m.importo,0),u=MOV.filter(m=>m.tipo==='uscita').reduce((a,m)=>a+m.importo,0);
+  $('#m-kpi').innerHTML=kpi('Entrate',eur(e),'pos')+kpi('Uscite',eur(u),'neg')+kpi('Saldo',eur(e-u),e-u>=0?'pos':'neg')+kpi('Movimenti',MOV.length);
+  $('#m-tbody').innerHTML=MOV.map(m=>`<tr><td>${m.data.split('-').reverse().join('/')}</td><td><span class="tag ${m.tipo[0]}">${m.tipo}</span></td><td>${esc(m.categoria)}</td><td>${esc(m.descrizione)}</td><td class="muted">${esc(m.metodo)}</td>
+    <td class="n ${m.tipo==='entrata'?'pos':'neg'}">${m.tipo==='uscita'?'−':''}${eur(m.importo)}</td>
+    <td class="n" style="white-space:nowrap"><button class="x" onclick="modMov(${m.id})">Modifica</button><button class="x" onclick="delMov(${m.id})">✕</button></td></tr>`).join('')||'<tr><td colspan="7" class="muted">Nessun movimento in questo periodo</td></tr>';
+}
+function categorie(tipo){return (IMP[tipo==='entrata'?'categorie_entrata':'categorie_uscita']||'Altro').split(',').map(s=>s.trim()).filter(Boolean)}
+function apriMov(m){
+  const f=$('#d-mov form');
+  f.categoria.innerHTML=[...new Set([...categorie(m.tipo),m.categoria].filter(Boolean))].map(c=>`<option>${esc(c)}</option>`).join('');
+  fill(f,m);f.importo.value=virg(m.importo);
+  $('#dm-tit').textContent=(m.id?'Modifica ':'Nuova ')+m.tipo;$('#d-mov').showModal();
+}
+function nuovoMov(tipo){apriMov({tipo,data:oggi(),metodo:'Contanti',categoria:categorie(tipo)[0]})}
+function modMov(id){apriMov(MOV.find(m=>m.id===id))}
+async function salvaMov(e){e.preventDefault();const d=formData(e.target);d.importo=num(d.importo);
+  await api('/api/movimenti'+(d.id?'/'+d.id:''),{method:d.id?'PUT':'POST',body:d});$('#d-mov').close();toast('Salvato');refresh()}
+async function delMov(id){if(!confirm('Eliminare questo movimento?'))return;await api('/api/movimenti/'+id,{method:'DELETE'});refresh()}
+function esportaCSV(){location.href='/api/export/movimenti.csv?anno='+($('#m-mese').value||oggi()).slice(0,4)}
+
+// gomme
+['#g-stag','#g-disp'].forEach(s=>$(s).onchange=renderGomme);$('#g-cerca').oninput=renderGomme;
+async function caricaGomme(){if(!IMP.ricarico_percentuale)await leggiImp();GOMME=await api('/api/gomme');renderGomme()}
+function renderGomme(){
+  const q=$('#g-cerca').value.toLowerCase().trim(),st=$('#g-stag').value,disp=$('#g-disp').checked;
+  const toks=q.split(/[\s\/]+|(?<=\d)r(?=\d)|\br(?=\d)/i).filter(Boolean);
+  const l=GOMME.filter(g=>{const t=`${g.marca} ${g.modello} ${g.larghezza} ${g.altezza} ${g.diametro} ${g.misura} ${g.indice} ${g.posizione}`.toLowerCase();
+    return toks.every(k=>t.includes(k))&&(!st||g.stagione===st)&&(!disp||g.quantita>0)});
+  const pezzi=l.reduce((a,g)=>a+g.quantita,0),val=l.reduce((a,g)=>a+g.quantita*g.costo,0),sotto=l.filter(g=>g.sotto_scorta).length;
+  $('#g-kpi').innerHTML=kpi('Articoli',l.length)+kpi('Pezzi',pezzi)+kpi('Valore a costo',eur(val))+kpi('Sotto scorta',sotto,sotto?'warn':'');
+  $('#g-tbody').innerHTML=l.map(g=>{
+    const tip=[g.prezzo_suggerito!=null?`Costo + ricarico: ${eur(g.prezzo_suggerito)}`:'',g.media_listino_misura!=null?`Media listino stessa misura: ${eur(g.media_listino_misura)}`:'',g.media_venduto_misura!=null?`Media venduto 12 mesi (${g.vendite_misura} vendite): ${eur(g.media_venduto_misura)}`:''].filter(Boolean).join('\n');
+    return `<tr class="${g.sotto_scorta?'low':''}"><td><b>${esc(g.misura)}</b> <span class="muted">${esc(g.indice)}</span></td>
+    <td>${esc(g.marca)} ${esc(g.modello)}${g.condizione==='Usata'?' <span class="tag">usata</span>':''}${g.note?`<div class="muted" style="font-size:12px">${esc(g.note)}</div>`:''}</td>
+    <td>${esc(g.stagione)}</td><td>${esc(g.dot)}</td><td>${esc(g.posizione)}</td>
+    <td class="n"><b>${g.quantita}</b></td><td class="n">${g.costo?eur(g.costo):'–'}</td><td class="n">${g.prezzo?eur(g.prezzo):'<span class="muted">–</span>'}</td>
+    <td class="n muted" title="${esc(tip)}">${eur(g.prezzo_suggerito)}</td>
+    <td class="n" style="white-space:nowrap"><button class="x" onclick="apriOp(${g.id},'vendi')">Vendi</button><button class="x" onclick="apriOp(${g.id},'carica')">Carica</button><button class="x" onclick="modGomma(${g.id})">Modifica</button><button class="x" onclick="delGomma(${g.id})">✕</button></td></tr>`}).join('')||'<tr><td colspan="10" class="muted">Nessuna gomma trovata</td></tr>';
+}
+function apriGomma(g){GCUR=g;const f=$('#d-gom form');fill(f,g);f.costo.value=g.costo?virg(g.costo):'';f.prezzo.value=g.prezzo?virg(g.prezzo):'';
+  $('#dg-tit').textContent=g.id?'Modifica gomma':'Nuova gomma';aggStima();$('#d-gom').showModal()}
+function nuovaGomma(){apriGomma({stagione:'Estiva',condizione:'Nuova',quantita:4,scorta_min:0})}
+function modGomma(id){apriGomma(GOMME.find(g=>g.id===id))}
+function aggStima(){
+  const f=$('#d-gom form'),c=num(f.costo.value),r=num(IMP.ricarico_percentuale),p=num(IMP.arrotonda_a);
+  const s=[];
+  if(c>0){let v=c*(1+r/100);if(p>0)v=Math.round(v/p)*p;s.push(`Prezzo suggerito (costo + ${r}%): <b onclick="usaPrezzo(${v.toFixed(2)})">${eur(v)}</b>`)}
+  const g=GCUR||{};
+  if(g.media_listino_misura!=null)s.push(`Media listino stessa misura: <b onclick="usaPrezzo(${g.media_listino_misura})">${eur(g.media_listino_misura)}</b>`);
+  if(g.media_venduto_misura!=null)s.push(`Media venduto (12 mesi): <b onclick="usaPrezzo(${g.media_venduto_misura})">${eur(g.media_venduto_misura)}</b>`);
+  $('#dg-stima').innerHTML=s.length?s.join(' &nbsp;·&nbsp; ')+' <span class="muted">(clicca per usarlo)</span>':'Inserisci il costo di acquisto per avere una stima del prezzo di vendita.';
+}
+function usaPrezzo(v){$('#d-gom form').prezzo.value=virg(v)}
+async function salvaGomma(e){e.preventDefault();const d=formData(e.target);d.costo=num(d.costo);d.prezzo=num(d.prezzo);
+  await api('/api/gomme'+(d.id?'/'+d.id:''),{method:d.id?'PUT':'POST',body:d});$('#d-gom').close();toast('Gomma salvata');caricaGomme()}
+async function delGomma(id){if(!confirm('Eliminare questa gomma dal magazzino? (i movimenti già registrati restano)'))return;await api('/api/gomme/'+id,{method:'DELETE'});caricaGomme()}
+
+function apriOp(id,op){
+  const g=GOMME.find(x=>x.id===id),f=$('#d-op form'),v=op==='vendi';
+  if(v&&g.quantita<=0){toast('Nessun pezzo disponibile');return}
+  fill(f,{id,op,quantita:v?Math.min(4,g.quantita):4,data:oggi(),metodo:v?'Contanti':'Bonifico',registra:true,
+    pu:virg(v?(g.prezzo||g.prezzo_suggerito||''):(g.costo||'')),mont:v?virg(IMP.montaggio_per_gomma||0):'',chi:''});
+  $('#do-tit').textContent=v?'Vendi gomme':'Carico in magazzino (nuovo arrivo)';
+  $('#do-desc').textContent=`${g.marca} ${g.modello} ${g.misura} — disponibili: ${g.quantita}`;
+  $('#do-pu').textContent=v?'Prezzo €/pz':'Costo €/pz';
+  $('#do-l-mont').hidden=!v;$('#do-l-tot').hidden=!v;
+  $('#do-chi').textContent=v?'Cliente / targa (facoltativo)':'Fornitore (facoltativo)';
+  $('#do-reg').textContent=v?'Registra l\'incasso tra le entrate':'Registra la spesa tra le uscite';
+  aggTotale();$('#d-op').showModal();
+}
+function aggTotale(){const f=$('#d-op form');if(f.op.value!=='vendi')return;f.totale.value=virg(((num(f.pu.value)+num(f.mont.value))*num(f.quantita.value)).toFixed(2))}
+async function salvaOp(e){e.preventDefault();const d=formData(e.target);
+  const body=d.op==='vendi'?{quantita:d.quantita,totale:num(d.totale),prezzo_unitario:num(d.pu),data:d.data,metodo:d.metodo,cliente:d.chi,registra:d.registra}
+    :{quantita:d.quantita,costo_unitario:num(d.pu),data:d.data,metodo:d.metodo,fornitore:d.chi,registra:d.registra};
+  await api(`/api/gomme/${d.id}/${d.op}`,{method:'POST',body});$('#d-op').close();toast(d.op==='vendi'?'Vendita registrata':'Carico registrato');caricaGomme()}
+
+leggiImp().then(caricaRiepilogo);
+</script>
+</body>
+</html>
