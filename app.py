@@ -11,7 +11,6 @@ import math
 import os
 import re
 import sqlite3
-import socket
 import sys
 import threading
 import webbrowser
@@ -561,28 +560,60 @@ ROUTES = [
 ]
 
 
-def porta_libera(start=8765):
-    for p in range(start, start + 20):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(("127.0.0.1", p)) != 0:
-                return p
-    raise RuntimeError("Nessuna porta libera")
+PORTA = 8765  # porta fissa: il link http://127.0.0.1:8765 vale sempre
+
+
+def gia_avviato():
+    """True se il gestionale è già in esecuzione su PORTA."""
+    from urllib.request import urlopen
+    try:
+        with urlopen(f"http://127.0.0.1:{PORTA}/api/impostazioni", timeout=2) as r:
+            return r.headers.get("Server", "").startswith("GestionaleOfficina")
+    except Exception:
+        return False
+
+
+def scrivi(msg=""):
+    # con pythonw (avvio silenzioso) non c'è console: niente print
+    if sys.stdout:
+        print(msg)
+
+
+def backup_periodico():
+    """Il server può restare acceso per settimane: un controllo ogni ora fa il backup del giorno."""
+    while True:
+        try:
+            backup("auto")
+        except Exception:
+            pass
+        threading.Event().wait(3600)
 
 
 def main():
+    url = f"http://127.0.0.1:{PORTA}/"
+    apri = "--no-browser" not in sys.argv and "--silenzioso" not in sys.argv
+    if gia_avviato():
+        # è già acceso (es. avviato in automatico): apro solo la pagina
+        if apri:
+            webbrowser.open(url)
+        return
     init_db()
-    backup("auto")
-    porta = porta_libera()
-    # 127.0.0.1 = raggiungibile solo da questo PC
-    server = ThreadingHTTPServer(("127.0.0.1", porta), Handler)
-    url = f"http://127.0.0.1:{porta}/"
-    print("=" * 56)
-    print("  GESTIONALE OFFICINA avviato")
-    print(f"  Indirizzo: {url}")
-    print(f"  Dati salvati in: {DB}")
-    print("  Per chiudere: chiudi questa finestra (o CTRL+C)")
-    print("=" * 56)
-    if "--no-browser" not in sys.argv:
+    try:
+        # 127.0.0.1 = raggiungibile solo da questo PC
+        server = ThreadingHTTPServer(("127.0.0.1", PORTA), Handler)
+    except OSError:
+        scrivi(f"La porta {PORTA} è occupata da un altro programma.")
+        if sys.stdout and sys.stdin and sys.stdin.isatty():
+            input("Premi INVIO per chiudere...")
+        sys.exit(1)
+    threading.Thread(target=backup_periodico, daemon=True).start()
+    scrivi("=" * 56)
+    scrivi("  GESTIONALE OFFICINA avviato")
+    scrivi(f"  Indirizzo: {url}")
+    scrivi(f"  Dati salvati in: {DB}")
+    scrivi("  Per chiudere: chiudi questa finestra (o CTRL+C)")
+    scrivi("=" * 56)
+    if apri:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     try:
         server.serve_forever()

@@ -12,17 +12,29 @@ Tutto gira sul PC: i dati stanno nel file `officina.db` (SQLite) nella stessa ca
   - **Vendi**: scala le gomme dal magazzino e registra l'incasso (con montaggio) tra le entrate.
   - **Carica**: aggiunge gomme arrivate, aggiorna il costo medio e può registrare la spesa tra le uscite.
 - **Stima prezzi**: per ogni gomma propone un prezzo di vendita = costo + ricarico % (impostabile), e mostra la media dei prezzi della stessa misura e dei venduti negli ultimi 12 mesi.
-- **Backup**: copia automatica giornaliera del database in `backup/` (ultimi 30 giorni) + backup manuale da Impostazioni.
+- **Backup**: copia automatica giornaliera del database in `backup/` (ultimi 30 giorni, anche se il PC resta acceso per giorni) + backup manuale da Impostazioni.
 
 ## Requisiti
 
 Solo **Python 3.8 o superiore**, nessuna libreria da installare.
 Su Windows: scaricalo da <https://www.python.org/downloads/> e durante l'installazione spunta **"Add Python to PATH"**.
 
-## Avvio
+## Avvio automatico (consigliato)
+
+Da fare **una volta sola**:
+
+- **Windows**: doppio clic su `Installa avvio automatico (Windows).bat`
+- **Mac**: doppio clic su `Installa avvio automatico (Mac).command` (la prima volta: tasto destro → Apri)
+
+Da quel momento il gestionale parte da solo all'accensione del PC, senza finestre, e sul desktop compare l'icona **Gestionale Officina**.
+L'indirizzo è sempre lo stesso, **http://127.0.0.1:8765**: si può salvare nei preferiti del browser.
+Se si avvia il programma quando è già acceso, si apre solo la pagina (non parte una seconda copia).
+Per togliere l'avvio automatico su Windows: `Rimuovi avvio automatico (Windows).bat`.
+
+## Avvio manuale
 
 - **Windows**: doppio clic su `Avvia Gestionale (Windows).bat`
-- **Mac**: doppio clic su `Avvia Gestionale (Mac).command` (la prima volta: tasto destro → Apri)
+- **Mac**: doppio clic su `Avvia Gestionale (Mac).command`
 - **Da terminale**: `python app.py`
 
 Si apre il browser su `http://127.0.0.1:8765`. Lascia aperta la finestra nera finché usi il gestionale; per chiuderlo chiudi quella finestra.
