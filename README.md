@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Gestionale Officina
 
 Piccolo gestionale locale per un'officina: **entrate/uscite**, **magazzino gomme** e **stima dei prezzi di vendita**.
@@ -47,3 +48,6 @@ static/index.html   interfaccia
 officina.db         i dati (creato al primo avvio, NON su git)
 backup/             backup automatici (NON su git)
 ```
+=======
+# officina
+>>>>>>> 028c991853446e7c97d9dee01a76f28c1c7d2c12
